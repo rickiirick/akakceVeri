@@ -22,7 +22,7 @@ def scrape_range(start_page, end_page):
     session = requests.Session(impersonate="chrome")
 
     for page in range(start_page, end_page + 1):
-        url = f"https://www.akakce.com/son-alti-ayin-en-ucuz-fiyatli-urunleri/?c=1&p={page}"
+        url = f"https://www.akakce.com/son-alti-ayin-en-ucuz-fiyatli-urunleri/?c=1&s=7&p1=250&p2=5000&p={page}"
         try:
             resp = session.get(url, timeout=20)
             if resp.status_code == 429:
