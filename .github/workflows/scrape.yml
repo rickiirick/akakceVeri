@@ -1,0 +1,60 @@
+name: Akakce Paralel Tarama
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk:
+          - { id: 1, start: 1, end: 30 }
+          - { id: 2, start: 31, end: 60 }
+          - { id: 3, start: 61, end: 90 }
+          - { id: 4, start: 91, end: 120 }
+          - { id: 5, start: 121, end: 150 }
+          - { id: 6, start: 151, end: 180 }
+          - { id: 7, start: 181, end: 210 }
+          - { id: 8, start: 211, end: 240 }
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python scraper.py --start ${{ matrix.chunk.start }} --end ${{ matrix.chunk.end }} --output part_${{ matrix.chunk.id }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: part-${{ matrix.chunk.id }}
+          path: part_${{ matrix.chunk.id }}.json
+          retention-days: 1
+
+  merge:
+    needs: scrape
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+      - run: python merge.py
+      - name: Veriyi data dalına tek commit olarak kaydet
+        run: |
+          cp akakce_raw.json /tmp/akakce_raw.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan data
+          git rm -rf . || true
+          cp /tmp/akakce_raw.json akakce_raw.json
+          git add akakce_raw.json
+          git commit -m "Akakce veri guncellemesi"
+          git push -f origin data
